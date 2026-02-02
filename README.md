@@ -129,8 +129,12 @@ GitHub webhook triggers Jenkins pipeline:
 
 ---
 
+## Jira Link
+Jira Project: https://student-team-beta.atlassian.net/jira
+GitHub Link
+GitHub Repository: https://github.com/JenishRichard/Student-team-beta.git
 
-
+---
 
 
 ## Team
