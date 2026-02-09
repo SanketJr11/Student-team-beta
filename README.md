@@ -65,22 +65,31 @@ This project follows a microservices architecture with CI/CD automation.
 ---
 
 ## Repository Structure
-Recommended structure (current / planned):
-college-classroom-booking/
-services/
-api-gateway/
-discovery-server/
-config-server/
-booking-service/
-room-service/
-deployments/
-docker-compose/
-docs/
-architecture/
-api-specs/
-Jenkinsfile
-README.md
-.gitignore
+
+The project follows a modular and well-organised repository structure to support microservices-based development, team collaboration, and CI/CD integration.
+
+student-team-beta/
+├── deployments/
+│   ├── database/                # Database schemas and initialization scripts
+│   └── docker-compose/          # Docker Compose files for local environments
+│
+├── docs/
+│   ├── api/                     # REST API endpoint documentation
+│   │   └── endpoints.md
+│   │
+│   └── architecture/            # Architecture and design documentation
+│       └── overview.md
+│
+├── services/
+│   ├── api-gateway/             # API Gateway service
+│   ├── booking-service/         # Booking management microservice
+│   ├── config-server/           # Centralised configuration server
+│   ├── discovery-server/        # Service discovery (Eureka)
+│   └── room-service/            # Room and availability microservice
+│
+├── .gitignore                   # Git ignore rules
+├── Jenkinsfile                  # CI/CD pipeline definition
+└── README.md                    # Project overview and instructions
 
 ---
 
