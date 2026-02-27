@@ -1,0 +1,16 @@
+server:
+  port: 8082
+
+spring:
+  datasource:
+    url: jdbc:mysql://192.168.1.6:3306/classroom
+    username: devuser
+    password: dev123
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
