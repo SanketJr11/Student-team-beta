@@ -22,12 +22,13 @@ public class BookingService {
 
     public Booking createBooking(Booking booking) {
 
-        if (repository.existsByRoomIdAndBookingDate(
-                booking.getRoomId(),
-                booking.getBookingDate())) {
+    	if (repository.existsByRoomIdAndBookingDateAndStatus(
+    	        booking.getRoomId(),
+    	        booking.getBookingDate(),
+    	        BookingStatus.CONFIRMED)) {
 
-        	throw new BookingConflictException("Room already booked for this date");
-        }
+    	    throw new BookingConflictException("Room already booked for this date");
+    	}
 
         return repository.save(booking);
     }

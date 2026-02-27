@@ -5,9 +5,11 @@ import java.time.LocalDate;
 
 @Entity
 @Table(
-        name = "bookings",
-        uniqueConstraints = @UniqueConstraint(columnNames = {"roomId", "bookingDate"})
-)
+	    name = "bookings",
+	    uniqueConstraints = @UniqueConstraint(
+	            columnNames = {"roomId", "bookingDate", "status"}
+	    )
+	)
 public class Booking {
 
     @Id
