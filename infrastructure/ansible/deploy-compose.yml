@@ -1,0 +1,38 @@
+- name: Deploy Classroom Booking System using Docker Compose
+  hosts: ec2
+  become: yes
+
+  tasks:
+    - name: Create application directory
+      file:
+        path: /home/ubuntu/classroom-booking
+        state: directory
+        owner: ubuntu
+        group: ubuntu
+        mode: '0755'
+
+    - name: Copy docker-compose file to EC2
+      copy:
+        src: ../../docker-compose.yml
+        dest: /home/ubuntu/classroom-booking/docker-compose.yml
+        owner: ubuntu
+        group: ubuntu
+        mode: '0644'
+
+    - name: Pull latest Docker images
+      command: docker-compose pull
+      args:
+        chdir: /home/ubuntu/classroom-booking
+
+    - name: Start microservices using Docker Compose
+      command: docker-compose up -d
+      args:
+        chdir: /home/ubuntu/classroom-booking
+
+    - name: Show running containers
+      command: docker ps
+      register: docker_output
+
+    - name: Display container status
+      debug:
+        var: docker_output.stdout_lines
