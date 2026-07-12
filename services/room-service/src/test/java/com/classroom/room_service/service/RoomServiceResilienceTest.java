@@ -1,6 +1,6 @@
 package com.classroom.room_service.service;
 
-import com.classroom.room_service.repository.RoomRepository;
+import com.classroom.room_service.repository.*;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringBootConfiguration;
@@ -9,6 +9,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.web.client.RestTemplate;
+import com.classroom.room_service.entity.Room;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -16,6 +17,7 @@ import static org.assertj.core.api.Assertions.assertThat;
         classes = RoomServiceResilienceTest.TestConfig.class,
         properties = {
                 "custom.delay-ms=250",
+                "booking-service.base-url=http://localhost:8083",
                 "resilience4j.timelimiter.instances.roomServiceTimeout.timeout-duration=50ms",
                 "spring.autoconfigure.exclude="
                         + "org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration,"
@@ -37,7 +39,7 @@ class RoomServiceResilienceTest {
 
     @Test
     void getRoomDetails_shouldReturnFallbackWhenTimeoutExceeded() {
-        com.classroom.room_service.entity.Room room = new com.classroom.room_service.entity.Room();
+    	Room room = new Room();
         room.setId(1L);
         room.setRoomNumber("A101");
         room.setBuilding("Main Block");
