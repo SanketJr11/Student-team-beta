@@ -1,40 +1,157 @@
+version: "3.8"
+
 services:
+  auth-service:
+    image: sanketshetty23/auth-service:latest
+    container_name: auth-service
+
+    ports:
+      - "8084:8084"
+
+    environment:
+      SERVER_PORT: 8084
+
+      JAVA_TOOL_OPTIONS: >-
+        -Xms64m
+        -Xmx256m
+        -XX:MaxMetaspaceSize=128m
+        -XX:+UseSerialGC
+
+      SPRING_CLOUD_CONFIG_ENABLED: "false"
+      EUREKA_CLIENT_ENABLED: "false"
+
+      SPRING_DATASOURCE_URL: jdbc:mysql://classroom-dev-db.cvwy4uckycwn.eu-west-1.rds.amazonaws.com:3306/auth_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: admin
+      SPRING_DATASOURCE_PASSWORD: admin123
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: com.mysql.cj.jdbc.Driver
+
+      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: 3
+      SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE: 1
+      SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT: 30000
+      SPRING_DATASOURCE_HIKARI_IDLE_TIMEOUT: 300000
+      SPRING_DATASOURCE_HIKARI_MAX_LIFETIME: 1200000
+
+      SPRING_JPA_SHOW_SQL: "false"
+      SPRING_JPA_OPEN_IN_VIEW: "false"
+
+      JWT_SECRET: CHANGE_THIS_TO_A_LONG_RANDOM_SECRET_AT_LEAST_32_CHARS_123456
+      JWT_EXPIRATION_MS: 3600000
+
+    mem_limit: 450m
+    restart: unless-stopped
+
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8084/actuator/health || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+
   room-service:
     image: sanketshetty23/room-service:latest
     container_name: room-service
+
     ports:
       - "8081:8081"
+
+    depends_on:
+      auth-service:
+        condition: service_healthy
+
     environment:
       SERVER_PORT: 8081
-      CONFIG_SERVER_URL: http://host.docker.internal:8888
-      EUREKA_SERVER_URL: http://host.docker.internal:8761/eureka/
-      DB_HOST: classroom-dev-db.cvwy4uckycwn.eu-west-1.rds.amazonaws.com
-      DB_PORT: 3306
-      DB_USER: admin
-      DB_PASSWORD: admin123
+
+      JAVA_TOOL_OPTIONS: >-
+        -Xms64m
+        -Xmx256m
+        -XX:MaxMetaspaceSize=128m
+        -XX:+UseSerialGC
+
+      SPRING_CLOUD_CONFIG_ENABLED: "false"
+      EUREKA_CLIENT_ENABLED: "false"
+
+      SPRING_DATASOURCE_URL: jdbc:mysql://classroom-dev-db.cvwy4uckycwn.eu-west-1.rds.amazonaws.com:3306/room_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: admin
+      SPRING_DATASOURCE_PASSWORD: admin123
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: com.mysql.cj.jdbc.Driver
+
+      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: 3
+      SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE: 1
+      SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT: 30000
+      SPRING_DATASOURCE_HIKARI_IDLE_TIMEOUT: 300000
+      SPRING_DATASOURCE_HIKARI_MAX_LIFETIME: 1200000
+
+      SPRING_JPA_SHOW_SQL: "false"
+      SPRING_JPA_OPEN_IN_VIEW: "false"
+
       BOOKING_SERVICE_URL: http://booking-service:8083
+
       JWT_SECRET: CHANGE_THIS_TO_A_LONG_RANDOM_SECRET_AT_LEAST_32_CHARS_123456
       JWT_EXPIRATION_MS: 3600000
-    extra_hosts:
-      - "host.docker.internal:host-gateway"  
-    
+
+    mem_limit: 450m
+    restart: unless-stopped
+
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8081/actuator/health || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
 
   booking-service:
     image: sanketshetty23/booking-service:latest
     container_name: booking-service
+
     ports:
       - "8083:8083"
+
+    depends_on:
+      auth-service:
+        condition: service_healthy
+      room-service:
+        condition: service_healthy
+
     environment:
       SERVER_PORT: 8083
-      CONFIG_SERVER_URL: http://host.docker.internal:8888
-      EUREKA_SERVER_URL: http://host.docker.internal:8761/eureka/
-      DB_HOST: classroom-dev-db.cvwy4uckycwn.eu-west-1.rds.amazonaws.com
-      DB_PORT: 3306
-      DB_USER: admin
-      DB_PASSWORD: admin123
+
+      JAVA_TOOL_OPTIONS: >-
+        -Xms64m
+        -Xmx256m
+        -XX:MaxMetaspaceSize=128m
+        -XX:+UseSerialGC
+
+      SPRING_CLOUD_CONFIG_ENABLED: "false"
+      EUREKA_CLIENT_ENABLED: "false"
+
+      SPRING_DATASOURCE_URL: jdbc:mysql://classroom-dev-db.cvwy4uckycwn.eu-west-1.rds.amazonaws.com:3306/booking_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: admin
+      SPRING_DATASOURCE_PASSWORD: admin123
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: com.mysql.cj.jdbc.Driver
+
+      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: 3
+      SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE: 1
+      SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT: 30000
+      SPRING_DATASOURCE_HIKARI_IDLE_TIMEOUT: 300000
+      SPRING_DATASOURCE_HIKARI_MAX_LIFETIME: 1200000
+
+      SPRING_JPA_SHOW_SQL: "false"
+      SPRING_JPA_OPEN_IN_VIEW: "false"
+
       ROOM_SERVICE_URL: http://room-service:8081
+
       JWT_SECRET: CHANGE_THIS_TO_A_LONG_RANDOM_SECRET_AT_LEAST_32_CHARS_123456
       JWT_EXPIRATION_MS: 3600000
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    
+
+      APP_SECURITY_USERNAME: booking-user
+      APP_SECURITY_PASSWORD: booking-pass
+
+    mem_limit: 450m
+    restart: unless-stopped
+
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8083/actuator/health || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 10
+      start_period: 60s

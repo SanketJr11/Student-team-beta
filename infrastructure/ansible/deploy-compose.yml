@@ -9,7 +9,7 @@
         state: directory
         owner: ubuntu
         group: ubuntu
-        mode: '0755'
+        mode: "0755"
 
     - name: Copy docker-compose file to EC2
       copy:
@@ -17,22 +17,64 @@
         dest: /home/ubuntu/classroom-booking/docker-compose.yml
         owner: ubuntu
         group: ubuntu
-        mode: '0644'
+        mode: "0644"
+
+    - name: Stop old containers
+      command: docker-compose down --remove-orphans
+      args:
+        chdir: /home/ubuntu/classroom-booking
+      ignore_errors: yes
+
+    - name: Remove stopped containers
+      command: docker container prune -f
+
+    - name: Remove dangling Docker images
+      command: docker image prune -f
 
     - name: Pull latest Docker images
       command: docker-compose pull
       args:
         chdir: /home/ubuntu/classroom-booking
 
-    - name: Start microservices using Docker Compose
-      command: docker-compose up -d
+    - name: Start Auth Service
+      command: docker-compose up -d auth-service
       args:
         chdir: /home/ubuntu/classroom-booking
 
-    - name: Show running containers
-      command: docker ps
+    - name: Wait for Auth Service startup
+      pause:
+        seconds: 40
+
+    - name: Start Room Service
+      command: docker-compose up -d room-service
+      args:
+        chdir: /home/ubuntu/classroom-booking
+
+    - name: Wait for Room Service startup
+      pause:
+        seconds: 40
+
+    - name: Start Booking Service
+      command: docker-compose up -d booking-service
+      args:
+        chdir: /home/ubuntu/classroom-booking
+
+    - name: Wait for Booking Service startup
+      pause:
+        seconds: 40
+
+    - name: Show all container statuses
+      command: docker ps -a
       register: docker_output
 
     - name: Display container status
       debug:
         var: docker_output.stdout_lines
+
+    - name: Show memory usage
+      command: free -h
+      register: memory_output
+
+    - name: Display memory usage
+      debug:
+        var: memory_output.stdout_lines

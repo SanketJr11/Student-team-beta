@@ -27,5 +27,14 @@ spring:
     table: flyway_schema_history_auth_service
 
 jwt:
-  secret: CHANGE_THIS_TO_A_LONG_RANDOM_SECRET_AT_LEAST_32_CHARS_123456
+  secret: ${JWT_SECRET:CHANGE_THIS_TO_A_LONG_RANDOM_SECRET_AT_LEAST_32_CHARS_123456}
   accessTokenMinutes: 60
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info 
+  endpoint:
+    health:
+      show-details: always       
