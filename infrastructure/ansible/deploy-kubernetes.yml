@@ -1,0 +1,283 @@
+---
+- name: Deploy Classroom Booking System to K3s
+  hosts: ec2
+  become: true
+
+  vars:
+    kubernetes_source_dir: "../kubernetes"
+    kubernetes_target_dir: "/home/ubuntu/classroom-kubernetes"
+    kubeconfig_path: "/etc/rancher/k3s/k3s.yaml"
+    swap_file_path: "/swapfile"
+    swap_file_size: "2G"
+
+    # Deploy only Auth Service for now.
+    # Add Room and Booking manifests later.
+    kubernetes_manifests:
+        - auth-deployment.yaml
+        - auth-service.yaml
+        - room-deployment.yaml
+        - room-service.yaml
+        - booking-deployment.yaml
+        - booking-service.yaml
+
+    # Deployment names that Ansible must wait for.
+    kubernetes_deployments:
+      - auth-service
+      - room-service
+      - booking-service
+
+  tasks:
+    # ---------------------------------------------------------
+    # EC2 memory preparation
+    # ---------------------------------------------------------
+
+    - name: Check whether swap file exists
+      ansible.builtin.stat:
+        path: "{{ swap_file_path }}"
+      register: swap_file_status
+
+    - name: Create 2 GB swap file when missing
+      ansible.builtin.command:
+        cmd: "fallocate -l {{ swap_file_size }} {{ swap_file_path }}"
+      when: not swap_file_status.stat.exists
+
+    - name: Set correct swap file permissions
+      ansible.builtin.file:
+        path: "{{ swap_file_path }}"
+        owner: root
+        group: root
+        mode: "0600"
+
+    - name: Format new swap file
+      ansible.builtin.command:
+        cmd: "mkswap {{ swap_file_path }}"
+      when: not swap_file_status.stat.exists
+
+    - name: Check active swap files
+      ansible.builtin.command:
+        cmd: swapon --show=NAME --noheadings
+      register: active_swap
+      changed_when: false
+
+    - name: Enable swap file
+      ansible.builtin.command:
+        cmd: "swapon {{ swap_file_path }}"
+      when: swap_file_path not in active_swap.stdout
+
+    - name: Make swap permanent after reboot
+      ansible.builtin.lineinfile:
+        path: /etc/fstab
+        line: "{{ swap_file_path }} none swap sw 0 0"
+        state: present
+        create: true
+        mode: "0644"
+
+    - name: Show memory and swap status
+      ansible.builtin.command:
+        cmd: free -h
+      register: memory_before_deployment
+      changed_when: false
+
+    - name: Display memory and swap status
+      ansible.builtin.debug:
+        var: memory_before_deployment.stdout_lines
+
+    # ---------------------------------------------------------
+    # K3s installation and startup
+    # ---------------------------------------------------------
+
+    - name: Check whether K3s is installed
+      ansible.builtin.stat:
+        path: /usr/local/bin/k3s
+      register: k3s_binary
+
+    - name: Download K3s installation script
+      ansible.builtin.get_url:
+        url: https://get.k3s.io
+        dest: /tmp/install-k3s.sh
+        mode: "0755"
+      when: not k3s_binary.stat.exists
+
+    - name: Install K3s
+      ansible.builtin.command:
+        cmd: /tmp/install-k3s.sh
+      when: not k3s_binary.stat.exists
+      register: k3s_install_result
+
+    - name: Ensure K3s service is running
+      ansible.builtin.systemd:
+        name: k3s
+        state: started
+        enabled: true
+        daemon_reload: true
+
+    - name: Wait for K3s kubeconfig file
+      ansible.builtin.wait_for:
+        path: "{{ kubeconfig_path }}"
+        state: present
+        timeout: 120
+
+    - name: Wait for Kubernetes node to become ready
+      ansible.builtin.command:
+        cmd: >
+          k3s kubectl wait
+          --for=condition=Ready
+          node
+          --all
+          --timeout=180s
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      register: node_ready_result
+      changed_when: false
+      retries: 3
+      delay: 10
+      until: node_ready_result.rc == 0
+
+    - name: Get Kubernetes node status
+      ansible.builtin.command:
+        cmd: k3s kubectl get nodes -o wide
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      register: node_output
+      changed_when: false
+
+    - name: Display Kubernetes node status
+      ansible.builtin.debug:
+        var: node_output.stdout_lines
+
+    # ---------------------------------------------------------
+    # Kubernetes manifest preparation
+    # ---------------------------------------------------------
+
+    - name: Create Kubernetes manifest directory on EC2
+      ansible.builtin.file:
+        path: "{{ kubernetes_target_dir }}"
+        state: directory
+        owner: ubuntu
+        group: ubuntu
+        mode: "0755"
+
+    - name: Copy selected Kubernetes manifests to EC2
+      ansible.builtin.copy:
+        src: "{{ kubernetes_source_dir }}/{{ item }}"
+        dest: "{{ kubernetes_target_dir }}/{{ item }}"
+        owner: ubuntu
+        group: ubuntu
+        mode: "0644"
+      loop: "{{ kubernetes_manifests }}"
+
+    - name: Validate selected Kubernetes manifests
+      ansible.builtin.command:
+        cmd: >
+          k3s kubectl apply
+          --dry-run=client
+          -f {{ kubernetes_target_dir }}/{{ item }}
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      loop: "{{ kubernetes_manifests }}"
+      changed_when: false
+
+    # ---------------------------------------------------------
+    # Kubernetes deployment
+    # ---------------------------------------------------------
+
+    - name: Apply selected Kubernetes manifests
+      ansible.builtin.command:
+        cmd: >
+          k3s kubectl apply
+          -f {{ kubernetes_target_dir }}/{{ item }}
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      loop: "{{ kubernetes_manifests }}"
+      register: apply_results
+      changed_when: >
+        'created' in apply_results.stdout or
+        'configured' in apply_results.stdout
+
+    - name: Display manifest apply results
+      ansible.builtin.debug:
+        msg: "{{ item.stdout_lines }}"
+      loop: "{{ apply_results.results }}"
+
+    - name: Wait for Kubernetes deployments
+      ansible.builtin.command:
+        cmd: >
+          k3s kubectl rollout status
+          deployment/{{ item }}
+          --timeout=300s
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      loop: "{{ kubernetes_deployments }}"
+      changed_when: false
+
+    # ---------------------------------------------------------
+    # Deployment verification
+    # ---------------------------------------------------------
+
+    - name: Get deployment status
+      ansible.builtin.command:
+        cmd: k3s kubectl get deployments -o wide
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      register: deployment_output
+      changed_when: false
+
+    - name: Display deployment status
+      ansible.builtin.debug:
+        var: deployment_output.stdout_lines
+
+    - name: Get pod status
+      ansible.builtin.command:
+        cmd: k3s kubectl get pods -o wide
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      register: pod_output
+      changed_when: false
+
+    - name: Display pod status
+      ansible.builtin.debug:
+        var: pod_output.stdout_lines
+
+    - name: Get Kubernetes services
+      ansible.builtin.command:
+        cmd: k3s kubectl get services -o wide
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      register: service_output
+      changed_when: false
+
+    - name: Display Kubernetes services
+      ansible.builtin.debug:
+        var: service_output.stdout_lines
+
+    - name: Get Kubernetes service endpoints
+      ansible.builtin.command:
+        cmd: k3s kubectl get endpoints
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      register: endpoint_output
+      changed_when: false
+
+    - name: Display Kubernetes service endpoints
+      ansible.builtin.debug:
+        var: endpoint_output.stdout_lines
+
+    - name: Show final memory usage
+      ansible.builtin.command:
+        cmd: free -h
+      register: final_memory_output
+      changed_when: false
+
+    - name: Display final memory usage
+      ansible.builtin.debug:
+        var: final_memory_output.stdout_lines
+
+    - name: Show final disk usage
+      ansible.builtin.command:
+        cmd: df -h /
+      register: final_disk_output
+      changed_when: false
+
+    - name: Display final disk usage
+      ansible.builtin.debug:
+        var: final_disk_output.stdout_lines
