@@ -27,6 +27,30 @@ resource "aws_security_group" "classroom_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  ingress {
+    description = "Kubernetes Auth NodePort"
+    from_port   = 32084
+    to_port     = 32084
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    description = "Kubernetes Room Service NodePort"
+    from_port   = 32081
+    to_port     = 32081
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    description = "Kubernetes Booking Service NodePort"
+    from_port   = 32083
+    to_port     = 32083
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
   egress {
     description = "Allow all outbound traffic"
     from_port   = 0

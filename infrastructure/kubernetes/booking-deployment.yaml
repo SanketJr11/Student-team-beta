@@ -1,0 +1,100 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: booking-service
+  labels:
+    app: booking-service
+
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: booking-service
+
+  template:
+    metadata:
+      labels:
+        app: booking-service
+
+    spec:
+      containers:
+        - name: booking-service
+          image: sanketshetty23/booking-service:latest
+          imagePullPolicy: Always
+
+          ports:
+            - containerPort: 8083
+
+          env:
+            - name: SERVER_PORT
+              value: "8083"
+
+            - name: SPRING_CLOUD_CONFIG_ENABLED
+              value: "false"
+
+            - name: EUREKA_CLIENT_ENABLED
+              value: "false"
+
+            - name: DB_HOST
+              value: "classroom-dev-db.cvwy4uckycwn.eu-west-1.rds.amazonaws.com"
+
+            - name: DB_PORT
+              value: "3306"
+
+            - name: BOOKING_DB_NAME
+              value: "booking_db"
+
+            - name: DB_USER
+              value: "admin"
+
+            - name: DB_PASSWORD
+              value: "admin123"
+
+            - name: JWT_SECRET
+              value: "CHANGE_THIS_TO_A_LONG_RANDOM_SECRET_AT_LEAST_32_CHARS_123456"
+
+            - name: JWT_EXPIRATION_MS
+              value: "3600000"
+
+            - name: ROOM_SERVICE_URL
+              value: "http://room-service:8081"
+
+            - name: APP_SECURITY_USERNAME
+              value: "booking-user"
+
+            - name: APP_SECURITY_PASSWORD
+              value: "booking-pass"
+
+            - name: JAVA_TOOL_OPTIONS
+              value: >-
+                -Xms64m
+                -Xmx256m
+                -XX:MaxMetaspaceSize=128m
+                -XX:+UseSerialGC
+
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "450Mi"
+              cpu: "500m"
+
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8083
+            initialDelaySeconds: 45
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 10
+
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8083
+            initialDelaySeconds: 60
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 5
