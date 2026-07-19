@@ -26,46 +26,15 @@ spec:
           ports:
             - containerPort: 8081
 
+          envFrom:
+            - configMapRef:
+                name: classroom-config
+            - secretRef:
+                name: classroom-secret
+
           env:
             - name: SERVER_PORT
               value: "8081"
-
-            - name: SPRING_CLOUD_CONFIG_ENABLED
-              value: "false"
-
-            - name: EUREKA_CLIENT_ENABLED
-              value: "false"
-
-            - name: DB_HOST
-              value: "classroom-dev-db.cvwy4uckycwn.eu-west-1.rds.amazonaws.com"
-
-            - name: DB_PORT
-              value: "3306"
-
-            - name: ROOM_DB_NAME
-              value: "room_db"
-
-            - name: DB_USER
-              value: "admin"
-
-            - name: DB_PASSWORD
-              value: "admin123"
-
-            - name: JWT_SECRET
-              value: "CHANGE_THIS_TO_A_LONG_RANDOM_SECRET_AT_LEAST_32_CHARS_123456"
-
-            - name: JWT_EXPIRATION_MS
-              value: "3600000"
-
-            - name: BOOKING_SERVICE_URL
-              value: "http://booking-service:8083"
-
-            - name: JAVA_TOOL_OPTIONS
-              value: >-
-                -Xms64m
-                -Xmx256m
-                -XX:MaxMetaspaceSize=128m
-                -XX:+UseSerialGC
 
           resources:
             requests:

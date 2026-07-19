@@ -13,6 +13,8 @@
     # Deploy only Auth Service for now.
     # Add Room and Booking manifests later.
     kubernetes_manifests:
+        - configmap.yaml
+        - secret.yaml
         - auth-deployment.yaml
         - auth-service.yaml
         - room-deployment.yaml

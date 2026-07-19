@@ -19,10 +19,43 @@ spec:
       containers:
         - name: auth-service
           image: sanketshetty23/auth-service:latest
+          imagePullPolicy: Always
 
           ports:
             - containerPort: 8084
 
+          envFrom:
+            - configMapRef:
+                name: classroom-config
+            - secretRef:
+                name: classroom-secret  
+
           env:
             - name: SERVER_PORT
               value: "8084"
+
+          resources:
+            requests:
+              memory: "200Mi"
+              cpu: "100m"
+            limits:
+              memory: "400Mi"
+              cpu: "500m"
+
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8084
+            initialDelaySeconds: 45
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 10
+
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8084
+            initialDelaySeconds: 60
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 5    
