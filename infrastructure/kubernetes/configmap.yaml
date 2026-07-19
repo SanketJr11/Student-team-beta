@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: classroom-config
+
+data:
+  DB_HOST: "classroom-dev-db.cvwy4uckycwn.eu-west-1.rds.amazonaws.com"
+  DB_PORT: "3306"
+
+  AUTH_DB_NAME: "auth_db"
+  ROOM_DB_NAME: "room_db"
+  BOOKING_DB_NAME: "booking_db"
+
+  JWT_EXPIRATION_MS: "3600000"
+
+  ROOM_SERVICE_URL: "http://room-service:8081"
+  BOOKING_SERVICE_URL: "http://booking-service:8083"
+
+  SPRING_CLOUD_CONFIG_ENABLED: "false"
+  EUREKA_CLIENT_ENABLED: "false"
+
+  JAVA_TOOL_OPTIONS: "-Xms64m -Xmx256m -XX:MaxMetaspaceSize=128m -XX:+UseSerialGC"
+
+  APP_SECURITY_USERNAME: "booking-user"
