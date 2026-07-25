@@ -1,11 +1,11 @@
 ---
 - name: Deploy Classroom Booking System to K3s
-  hosts: ec2
+  hosts: k3s_server
   become: true
 
   vars:
     kubernetes_source_dir: "../kubernetes"
-    kubernetes_target_dir: "/home/ubuntu/classroom-kubernetes"
+    kubernetes_target_dir: "/opt/classroom-kubernetes"
     kubeconfig_path: "/etc/rancher/k3s/k3s.yaml"
     swap_file_path: "/swapfile"
     swap_file_size: "2G"
@@ -30,7 +30,7 @@
 
   tasks:
     # ---------------------------------------------------------
-    # EC2 memory preparation
+    # Hetzner memory preparation
     # ---------------------------------------------------------
 
     - name: Check whether swap file exists
@@ -151,20 +151,20 @@
     # Kubernetes manifest preparation
     # ---------------------------------------------------------
 
-    - name: Create Kubernetes manifest directory on EC2
+    - name: Create Kubernetes manifest directory on Hetzner server
       ansible.builtin.file:
         path: "{{ kubernetes_target_dir }}"
         state: directory
-        owner: ubuntu
-        group: ubuntu
+        owner: root
+        group: root
         mode: "0755"
 
-    - name: Copy selected Kubernetes manifests to EC2
+    - name: Copy selected Kubernetes manifests to Hetzner server
       ansible.builtin.copy:
         src: "{{ kubernetes_source_dir }}/{{ item }}"
         dest: "{{ kubernetes_target_dir }}/{{ item }}"
-        owner: ubuntu
-        group: ubuntu
+        owner: root
+        group: root
         mode: "0644"
       loop: "{{ kubernetes_manifests }}"
 
