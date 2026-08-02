@@ -36,6 +36,14 @@ resource "hcloud_firewall" "classroom_firewall" {
   rule {
     direction   = "in"
     protocol    = "tcp"
+    port        = "32090"
+    source_ips  = ["0.0.0.0/0", "::/0"]
+    description = "Prometheus NodePort"
+  }
+
+  rule {
+    direction   = "in"
+    protocol    = "tcp"
     port        = "80"
     source_ips  = ["0.0.0.0/0", "::/0"]
     description = "HTTP for K3s Traefik"

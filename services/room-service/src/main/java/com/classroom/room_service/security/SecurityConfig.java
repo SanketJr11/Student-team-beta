@@ -56,7 +56,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers(PUBLIC_ENDPOINTS.toArray(String[]::new)).permitAll()
                 .requestMatchers(ROOM_API_PATTERNS.toArray(String[]::new)).authenticated()
-                .requestMatchers("/actuator/health", "/actuator/info").permitAll()
+                .requestMatchers("/actuator/health", "/actuator/info", "/actuator/prometheus").permitAll()
                 .anyRequest().permitAll());
     }
 
