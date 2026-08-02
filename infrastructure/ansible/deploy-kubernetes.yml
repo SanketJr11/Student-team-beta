@@ -6,12 +6,13 @@
   vars:
     kubernetes_source_dir: "../kubernetes"
     kubernetes_target_dir: "/opt/classroom-kubernetes"
+    monitoring_source_dir: "../kubernetes/monitoring"
+    monitoring_target_dir: "/opt/classroom-kubernetes/monitoring"
     kubeconfig_path: "/etc/rancher/k3s/k3s.yaml"
     swap_file_path: "/swapfile"
     swap_file_size: "2G"
 
-    # Deploy only Auth Service for now.
-    # Add Room and Booking manifests later.
+    # Kubernetes manifests to be deployed.
     kubernetes_manifests:
         - configmap.yaml
         - secret.yaml
@@ -22,11 +23,23 @@
         - booking-deployment.yaml
         - booking-service.yaml
 
+    # Kubernetes manifests for monitoring to be deployed.
+    monitoring_manifests:
+        - monitoring-namespace.yaml
+        - prometheus-configmap.yaml
+        - prometheus-pvc.yaml
+        - prometheus-deployment.yaml
+        - prometheus-service.yaml    
+
     # Deployment names that Ansible must wait for.
     kubernetes_deployments:
       - auth-service
       - room-service
       - booking-service
+
+    # Deployment names for monitoring that Ansible must wait for.
+    monitoring_deployments:
+      - prometheus 
 
   tasks:
     # ---------------------------------------------------------
@@ -159,6 +172,14 @@
         group: root
         mode: "0755"
 
+    - name: Create monitoring manifest directory on Hetzner server
+      ansible.builtin.file:
+        path: "{{ monitoring_target_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
     - name: Copy selected Kubernetes manifests to Hetzner server
       ansible.builtin.copy:
         src: "{{ kubernetes_source_dir }}/{{ item }}"
@@ -167,6 +188,16 @@
         group: root
         mode: "0644"
       loop: "{{ kubernetes_manifests }}"
+    
+    - name: Copy monitoring manifests to server
+      ansible.builtin.copy:
+        src: "{{ monitoring_source_dir }}/{{ item }}"
+        dest: "{{ monitoring_target_dir }}/{{ item }}"
+        owner: root
+        group: root
+        mode: "0644"
+      loop: "{{ monitoring_manifests }}"
+
 
     - name: Validate selected Kubernetes manifests
       ansible.builtin.command:
@@ -178,6 +209,17 @@
         KUBECONFIG: "{{ kubeconfig_path }}"
       loop: "{{ kubernetes_manifests }}"
       changed_when: false
+
+    - name: Validate monitoring manifests
+      ansible.builtin.command:
+        cmd: >
+          k3s kubectl apply
+          --dry-run=client
+          -f {{ monitoring_target_dir }}/{{ item }}
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      loop: "{{ monitoring_manifests }}"
+      changed_when: false 
 
     # ---------------------------------------------------------
     # Kubernetes deployment
@@ -201,6 +243,24 @@
         msg: "{{ item.stdout_lines }}"
       loop: "{{ apply_results.results }}"
 
+    - name: Apply monitoring manifests
+      ansible.builtin.command:
+        cmd: >
+          k3s kubectl apply
+          -f {{ monitoring_target_dir }}/{{ item }}
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      loop: "{{ monitoring_manifests }}"
+      register: monitoring_apply_results
+      changed_when: >
+        'created' in monitoring_apply_results.stdout or
+        'configured' in monitoring_apply_results.stdout
+
+    - name: Display monitoring apply results
+      ansible.builtin.debug:
+        msg: "{{ item.stdout_lines }}"
+      loop: "{{ monitoring_apply_results.results }}"    
+
     - name: Wait for Kubernetes deployments
       ansible.builtin.command:
         cmd: >
@@ -211,7 +271,22 @@
         KUBECONFIG: "{{ kubeconfig_path }}"
       loop: "{{ kubernetes_deployments }}"
       changed_when: false
-
+    
+    - name: Wait for monitoring deployments
+      ansible.builtin.command:
+        cmd: >
+          k3s kubectl rollout status
+          deployment/{{ item }}
+          --namespace monitoring
+          --timeout=600s
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      loop: "{{ monitoring_deployments }}"
+      register: monitoring_rollout_result
+      retries: 3
+      delay: 20
+      until: monitoring_rollout_result.rc == 0
+      changed_when: false
     # ---------------------------------------------------------
     # Deployment verification
     # ---------------------------------------------------------
@@ -263,6 +338,65 @@
     - name: Display Kubernetes service endpoints
       ansible.builtin.debug:
         var: endpoint_output.stdout_lines
+
+    - name: Get monitoring deployment status
+      ansible.builtin.command:
+        cmd: >
+          k3s kubectl get deployments
+          --namespace monitoring
+          -o wide
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      register: monitoring_deployment_output
+      changed_when: false
+
+    - name: Display monitoring deployment status
+      ansible.builtin.debug:
+        var: monitoring_deployment_output.stdout_lines
+
+    - name: Get monitoring pod status
+      ansible.builtin.command:
+        cmd: >
+          k3s kubectl get pods
+          --namespace monitoring
+          -o wide
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      register: monitoring_pod_output
+      changed_when: false
+
+    - name: Display monitoring pod status
+      ansible.builtin.debug:
+        var: monitoring_pod_output.stdout_lines
+
+    - name: Get monitoring services
+      ansible.builtin.command:
+        cmd: >
+          k3s kubectl get services
+          --namespace monitoring
+          -o wide
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      register: monitoring_service_output
+      changed_when: false
+
+    - name: Display monitoring services
+      ansible.builtin.debug:
+        var: monitoring_service_output.stdout_lines
+
+    - name: Get monitoring persistent volume claims
+      ansible.builtin.command:
+        cmd: >
+          k3s kubectl get pvc
+          --namespace monitoring
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      register: monitoring_pvc_output
+      changed_when: false
+
+    - name: Display monitoring persistent volume claims
+      ansible.builtin.debug:
+        var: monitoring_pvc_output.stdout_lines    
 
     - name: Show final memory usage
       ansible.builtin.command:
