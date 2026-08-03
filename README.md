@@ -372,19 +372,11 @@ Open:
 ```
 http://<SERVER-IP>:32300
 ```
-
 ---
 
 # Future Improvements
 
 - GitHub Webhooks for instant CI/CD
-- HTTPS using Ingress Controller
-- Horizontal Pod Autoscaler (HPA)
-- Centralized logging using ELK or Loki
-- Helm Charts
-- GitOps using ArgoCD
-- Multiple Kubernetes worker nodes
-- Automated backup strategy
 - SonarQube integration
 - Automated testing in Jenkins
 
