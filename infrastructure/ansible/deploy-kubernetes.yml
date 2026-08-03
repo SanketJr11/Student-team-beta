@@ -29,7 +29,12 @@
         - prometheus-configmap.yaml
         - prometheus-pvc.yaml
         - prometheus-deployment.yaml
-        - prometheus-service.yaml    
+        - prometheus-service.yaml
+        - grafana-secret.yaml
+        - grafana-datasource.yaml
+        - grafana-pvc.yaml
+        - grafana-deployment.yaml
+        - grafana-service.yaml    
 
     # Deployment names that Ansible must wait for.
     kubernetes_deployments:
@@ -39,7 +44,8 @@
 
     # Deployment names for monitoring that Ansible must wait for.
     monitoring_deployments:
-      - prometheus 
+      - prometheus
+      - grafana
 
   tasks:
     # ---------------------------------------------------------
@@ -261,15 +267,35 @@
         msg: "{{ item.stdout_lines }}"
       loop: "{{ monitoring_apply_results.results }}"    
 
+    - name: Restart application deployments to pull latest Docker images
+      ansible.builtin.command:
+        cmd: >
+          k3s kubectl rollout restart
+          deployment/{{ item }}
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      loop: "{{ kubernetes_deployments }}"
+      register: application_restart_results
+      changed_when: true
+
+    - name: Display application restart results
+      ansible.builtin.debug:
+        msg: "{{ item.stdout_lines }}"
+      loop: "{{ application_restart_results.results }}"  
+
     - name: Wait for Kubernetes deployments
       ansible.builtin.command:
         cmd: >
           k3s kubectl rollout status
           deployment/{{ item }}
-          --timeout=300s
+          --timeout=600s
       environment:
         KUBECONFIG: "{{ kubeconfig_path }}"
       loop: "{{ kubernetes_deployments }}"
+      register: application_rollout_result
+      retries: 3
+      delay: 20
+      until: application_rollout_result.rc == 0
       changed_when: false
     
     - name: Wait for monitoring deployments
