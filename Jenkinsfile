@@ -1,8 +1,12 @@
 pipeline {
     agent any
 
+    triggers {
+        pollSCM('H/5 * * * *')
+    }
+
     environment {
-        PATH = "/opt/homebrew/bin:/usr/local/bin:${env.PATH}"
+        PATH = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:${env.PATH}"
         DOCKERHUB_USERNAME = 'sanketshetty23'
 
         AUTH_IMAGE = 'sanketshetty23/auth-service'
@@ -169,11 +173,53 @@ pipeline {
                 '''
             }
         }
+
+        stage('Deploy to Hetzner') {
+            steps {
+                sshagent(credentials: ['hetzner-ssh-key']) {
+                    dir('infrastructure/ansible') {
+                        sh '''
+                            set -e
+
+                            export ANSIBLE_HOST_KEY_CHECKING=False
+
+                            ansible all \
+                            -i inventory.ini \
+                            -m ping
+
+                            ansible-playbook \
+                            -i inventory.ini \
+                            deploy-kubernetes.yml
+                        '''
+                    }
+                }
+            }
+        }
+
+        stage('Verify Kubernetes Deployment') {
+            steps {
+                sshagent(credentials: ['hetzner-ssh-key']) {
+                    sh '''
+                        set -e
+
+                        ssh -o StrictHostKeyChecking=no \
+                        root@167.235.20.160 \
+                        '
+                            k3s kubectl get deployments &&
+                            k3s kubectl get pods -o wide &&
+                            k3s kubectl get services &&
+                            k3s kubectl get pods -n monitoring &&
+                            k3s kubectl get services -n monitoring
+                        '
+                    '''
+                }
+            }
+        }
     }
 
     post {
         success {
-            echo 'All three Docker images were built and pushed successfully.'
+            echo 'Build, image push and Hetzner deployment completed successfully.'
         }
 
         failure {

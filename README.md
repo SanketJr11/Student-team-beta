@@ -1,174 +1,399 @@
-# College Class Room Booking System using Microservices and CI/CD
+# Classroom Booking System – Cloud Native Multi-Cloud Architecture
 
-## Overview
-In our college, there is no single web application to quickly check **classroom availability** and book a room for staff activities such as extra lectures, tutorials, meetings, or events. This project aims to build a **web-based room booking system** that shows real-time availability and allows staff to reserve and release rooms easily.
+A cloud-native Classroom Booking System developed using a microservices architecture. The project demonstrates modern DevOps practices by combining Infrastructure as Code, Kubernetes orchestration, CI/CD automation, and application monitoring across multiple cloud providers.
 
-**MVP Scope:** Start with **1 floor** (limited set of rooms) and later extend to all floors/buildings.
-
----
-
-## Problem Statement
-Currently, staff members rely on manual coordination to find free rooms. This leads to:
-- confusion and last-minute clashes,
-- double bookings,
-- wastage of time in confirming availability.
-
-This system will solve it by providing:
-- room availability view by date/time,
-- booking and cancellation,
-- “Mark Not Needed” option to release a room when a class is cancelled.
+The application is deployed using a **multi-cloud architecture**, where the microservices run on **Hetzner Cloud** using Kubernetes (K3s), while the database is hosted on **AWS RDS**. The infrastructure is provisioned using Terraform, deployments are automated using Ansible, continuous integration is handled by Jenkins, and application monitoring is provided by Prometheus and Grafana.
 
 ---
 
-## Users
-- **Staff (Primary):** view available rooms, book/cancel, mark room not needed  
-- **Admin (Secondary):** manage room details (rooms list, capacity, equipment), override bookings (optional)
+# Features
+
+- User Authentication Service
+- Room Management Service
+- Booking Management Service
+- RESTful APIs
+- Docker containerization
+- Kubernetes (K3s) deployment
+- Multi-cloud architecture (Hetzner + AWS)
+- Infrastructure as Code using Terraform
+- Configuration management using Ansible
+- CI/CD using Jenkins
+- Application monitoring with Prometheus
+- Dashboard visualization with Grafana
 
 ---
 
-## High-Level Architecture
-This project follows a microservices architecture with CI/CD automation.
+# Multi-Cloud Architecture
 
-### Core Microservices
-1. **Room & Availability Service**
-   - Manage rooms by floor (CRUD)
-   - Provide availability for a given date/time slot
-   - Store room metadata: capacity, type, equipment
-
-2. **Booking Service**
-   - Create/update/cancel bookings (CRUD)
-   - Prevent double booking (overlapping time)
-   - “Mark Not Needed” to release room slot
-   - Calls Room Service to validate availability and lock/release room
-
-### Platform Components
-- **API Gateway** (single entry point)
-- **Service Discovery (Eureka)**
-- **Config Server** (central config)
-- **Security** (JWT based authentication)
-- **Resilience4J** (fallback handling when a dependent service is down)
-- **Observability** (Spring Actuator + Prometheus + Grafana)
-- **Swagger/OpenAPI** for API documentation
-
----
-
-## Tech Stack
-- **Backend:** Java, Spring Boot, Spring Cloud
-- **Microservices:** REST APIs, Eureka, Spring Cloud Gateway, Config Server
-- **Build:** Maven
-- **CI/CD:** GitHub + Jenkins Pipeline (Jenkinsfile)
-- **Code Quality:** Checkstyle + SonarQube (Quality Gate)
-- **Artifacts:** Nexus Repository (planned)
-- **Containers/Deploy:** Docker + Docker Compose (Dev/Staging/Prod profiles)
-- **Monitoring:** Prometheus + Grafana
+```
+                    GitHub
+                       │
+                       ▼
+                 Jenkins Pipeline
+                       │
+                       ▼
+                Docker Hub Images
+                       │
+                       ▼
+                Ansible Deployment
+                       │
+                       ▼
+          Hetzner Cloud (K3s Cluster)
+      ┌──────────┬──────────┬──────────┐
+      │          │          │          │
+      ▼          ▼          ▼
+ Auth Service  Room Service  Booking Service
+      │          │          │
+      └──────────┴──────────┘
+               │
+               ▼
+        AWS RDS MySQL Database
+               │
+               ▼
+          Prometheus Server
+               │
+               ▼
+          Grafana Dashboard
+```
 
 ---
 
-## Repository Structure
+# Technology Stack
 
-The project follows a modular and well-organised repository structure to support microservices-based development, team collaboration, and CI/CD integration.
-
-```text
-student-team-beta/
-├── deployments/
-│   ├── database/              # Database schemas and initialization scripts
-│   └── docker-compose/        # Docker Compose files for local environments
-├── docs/
-│   ├── api/                   # REST API endpoint documentation
-│   │   └── endpoints.md
-│   └── architecture/          # Architecture and design documentation
-│       └── overview.md
-├── services/
-│   ├── api-gateway/           # API Gateway service
-│   ├── booking-service/       # Booking management microservice
-│   ├── config-server/         # Centralised configuration server
-│   ├── discovery-server/      # Service discovery (Eureka)
-│   └── room-service/          # Room and availability microservice
-├── .gitignore                 # Git ignore rules
-├── Jenkinsfile                # CI/CD pipeline definition
-└── README.md                  # Project overview and instructions
+| Category | Technology |
+|----------|------------|
+| Language | Java 17 |
+| Framework | Spring Boot |
+| Build Tool | Maven |
+| Database | MySQL (AWS RDS) |
+| Containerization | Docker |
+| Container Registry | Docker Hub |
+| Orchestration | Kubernetes (K3s) |
+| Infrastructure | Terraform |
+| Configuration Management | Ansible |
+| CI/CD | Jenkins |
+| Monitoring | Prometheus |
+| Dashboard | Grafana |
+| Cloud Providers | Hetzner Cloud & AWS |
 
 ---
 
-## Planned Key Features (MVP - 1 Floor)
-- View rooms on Floor 1 with filters (capacity, type, equipment)
-- View available slots for selected date/time
-- Book a room (no double booking)
-- Cancel booking / update booking time
-- Mark room “Not Needed” (release the room slot)
-- Role-based access (Staff/Admin)
+# Project Structure
+
+```
+Student-team-beta
+│
+├── services
+│   ├── auth-service
+│   ├── room-service
+│   └── booking-service
+│
+├── infrastructure
+│   ├── terraform-hetzner
+│   ├── kubernetes
+│   └── ansible
+│
+├── Jenkinsfile
+│
+└── README.md
+```
 
 ---
 
-## API (Planned) – Quick View
-### Room Service
-- `POST /rooms` (Admin)
-- `GET /rooms?floor=1`
-- `GET /rooms/{roomId}`
-- `GET /rooms/{roomId}/availability?date=YYYY-MM-DD`
-- `PATCH /rooms/{roomId}` (Admin)
-- `DELETE /rooms/{roomId}` (Admin)
+# Microservices
 
-### Booking Service
-- `POST /bookings`
-- `GET /bookings?userId=...`
-- `GET /bookings?roomId=...&date=...`
-- `PATCH /bookings/{bookingId}`
-- `DELETE /bookings/{bookingId}`
-- `POST /bookings/{bookingId}/not-needed` (Release slot)
+## Authentication Service
+
+Responsible for:
+
+- User authentication
+- Login validation
+- JWT token generation
+- User management
 
 ---
 
-## CI/CD Plan (Pipeline)
-GitHub webhook triggers Jenkins pipeline:
-1. Checkout code
-2. Build + Unit tests (Maven)
-3. Checkstyle / static checks
-4. SonarQube scan + Quality Gate
-5. Package artifacts (JAR)
-6. Jenkins pipeline is triggered automatically using a GitHub webhook (ngork)
-7. Build Docker images
-8. Deploy to **Development** (auto)
-9. Deploy to **main** (Manual)
-10. Notifications (Slack) + Monitoring (Grafana)
+## Room Service
+
+Responsible for:
+
+- Creating rooms
+- Updating room information
+- Retrieving available rooms
+- Room management
 
 ---
 
-## Jira Link
-Jira Project: https://student-team-beta.atlassian.net/jira
+## Booking Service
 
-GitHub Repository: https://github.com/SanketJr11/Student-team-beta
+Responsible for:
 
----
-
-## Database Setup for Team Collaboration
-
-To avoid "works on my machine" DB issues, services use:
-
-- Environment-based DB config (`DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`)
-- Auth schema config (`AUTH_DB_NAME`, default `auth_db`)
-- Flyway SQL migrations (`src/main/resources/db/migration`)
-
-### Shared DB values (current)
-
-- `DB_HOST=classroom-dev-db.cvwy4uckycwn.eu-west-1.rds.amazonaws.com`
-- `DB_PORT=3306`
-- `AUTH_DB_NAME=auth_db`
-- `DB_USER=admin`
-- `DB_PASSWORD=admin123`
-
-### How to run
-
-1. Ensure RDS schemas exist: `auth_db`, `room_db`, `booking_db`.
-2. Export variables (or configure in IDE run config):
-   `export DB_HOST=classroom-dev-db.cvwy4uckycwn.eu-west-1.rds.amazonaws.com DB_PORT=3306 AUTH_DB_NAME=auth_db DB_USER=admin DB_PASSWORD=admin123`
-3. Start services.
-
-Flyway will auto-apply missing migrations on startup, so schema changes committed by one teammate are applied for others after pull.
+- Creating bookings
+- Updating bookings
+- Viewing booking history
+- Booking validation
 
 ---
 
-## Team
-	•	Jenish Richard – A00336114
-	•	Sanket Shetty – A00336144
-	•	Shivendra Surve – A00336154
+# Infrastructure
+
+Infrastructure is provisioned using **Terraform**.
+
+Terraform automatically creates:
+
+- Hetzner Virtual Machine
+- Firewall Rules
+- SSH Keys
+- Public IPv4 Address
+
+AWS provides:
+
+- Amazon RDS MySQL Database
+
+This setup separates the application layer from the database layer while reducing infrastructure costs.
+
+---
+
+# Kubernetes Deployment
+
+The application is deployed on a single-node **K3s Kubernetes Cluster** running on Hetzner Cloud.
+
+Kubernetes resources include:
+
+- Deployments
+- Services
+- ConfigMaps
+- Secrets
+- Persistent Volume Claims
+- Monitoring Namespace
+
+Each microservice runs as an independent Kubernetes Deployment.
+
+---
+
+# Configuration Management
+
+Ansible is used to automate deployments.
+
+The deployment process:
+
+- Copies Kubernetes manifests
+- Applies ConfigMaps and Secrets
+- Deploys microservices
+- Deploys monitoring components
+- Waits for successful rollout
+- Verifies deployment health
+
+Deployment command:
+
+```bash
+ansible-playbook -i inventory.ini deploy-kubernetes.yml
+```
+
+---
+
+# CI/CD Pipeline
+
+Jenkins automates the application build process.
+
+Pipeline Flow
+
+```
+Developer
+     │
+ git push
+     │
+     ▼
+GitHub Repository
+     │
+     ▼
+Jenkins Pipeline
+     │
+     ▼
+Build Spring Boot Applications
+     │
+     ▼
+Create Docker Images
+     │
+     ▼
+Push Images to Docker Hub
+     │
+     ▼
+Run Ansible Deployment
+     │
+     ▼
+Deploy to Kubernetes
+     │
+     ▼
+Verify Application Health
+```
+
+The pipeline automatically:
+
+- Builds all three microservices
+- Creates Docker images
+- Pushes images to Docker Hub
+- Deploys the latest version to Kubernetes
+- Verifies deployment status
+
+---
+
+# Monitoring
+
+## Prometheus
+
+Prometheus collects metrics from all three microservices using Spring Boot Actuator and Micrometer.
+
+Metrics collected include:
+
+- Application availability
+- JVM memory usage
+- CPU usage
+- HTTP request metrics
+- Response time
+- JVM thread count
+
+---
+
+## Grafana
+
+Grafana is connected to Prometheus to visualize application metrics.
+
+Current dashboards include:
+
+- Service Health
+- JVM Memory Usage
+- HTTP Request Metrics
+- Response Time
+- Application Availability
+
+---
+
+# Security
+
+Sensitive configuration is stored using Kubernetes Secrets.
+
+Examples include:
+
+- Database credentials
+- Grafana administrator credentials
+- Application configuration
+
+Configuration values are managed using Kubernetes ConfigMaps.
+
+---
+
+# Deployment Workflow
+
+```
+Developer
+      │
+      ▼
+GitHub Repository
+      │
+      ▼
+Jenkins Pipeline
+      │
+      ▼
+Docker Hub
+      │
+      ▼
+Ansible
+      │
+      ▼
+Kubernetes Cluster
+      │
+      ▼
+AWS RDS
+```
+
+---
+
+# How to Run the Project
+
+## Clone Repository
+
+```bash
+git clone https://github.com/<your-username>/Student-team-beta.git
+```
+
+---
+
+## Provision Infrastructure
+
+```bash
+cd infrastructure/terraform-hetzner
+
+terraform init
+
+terraform plan
+
+terraform apply
+```
+
+---
+
+## Deploy Application
+
+```bash
+cd infrastructure/ansible
+
+ansible-playbook -i inventory.ini deploy-kubernetes.yml
+```
+
+---
+
+## Verify Deployment
+
+```bash
+k3s kubectl get deployments
+
+k3s kubectl get pods
+
+k3s kubectl get services
+```
+
+---
+
+## Prometheus
+
+Open:
+
+```
+http://<SERVER-IP>:32090
+```
+
+---
+
+## Grafana
+
+Open:
+
+```
+http://<SERVER-IP>:32300
+```
+
+---
+
+# Future Improvements
+
+- GitHub Webhooks for instant CI/CD
+- HTTPS using Ingress Controller
+- Horizontal Pod Autoscaler (HPA)
+- Centralized logging using ELK or Loki
+- Helm Charts
+- GitOps using ArgoCD
+- Multiple Kubernetes worker nodes
+- Automated backup strategy
+- SonarQube integration
+- Automated testing in Jenkins
+
+---
+
+# Author
+
+**Sanket Shetty**
+
+Master's in Software Design with Cloud Native Computing
+
+This project demonstrates the implementation of a complete cloud-native application using microservices, Kubernetes, Infrastructure as Code, CI/CD automation, monitoring, and a multi-cloud deployment architecture.
