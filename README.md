@@ -4,7 +4,7 @@ A cloud-native Classroom Booking System developed using a microservices architec
 
 The application is deployed using a **multi-cloud architecture**, where the microservices run on **Hetzner Cloud** using Kubernetes (K3s), while the database is hosted on **AWS RDS**. The infrastructure is provisioned using Terraform, deployments are automated using Ansible, continuous integration is handled by Jenkins, and application monitoring is provided by Prometheus and Grafana.
 
----
+-----
 
 # Features
 
