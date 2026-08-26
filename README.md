@@ -390,3 +390,4 @@ http://<SERVER-IP>:32300
 Master's in Software Design with Cloud Native Computing, TUS Athlone Ireland
 
 This project demonstrates the implementation of a complete cloud-native application using microservices, Kubernetes, Infrastructure as Code, CI/CD automation, monitoring, and a multi-cloud deployment architecture.
+
